@@ -99,6 +99,7 @@ Status BuildTable(
       ioptions.listeners, dbname, column_family_name, fname, job_id, reason);
 #endif  // !ROCKSDB_LITE
   TableProperties tp;
+  uint64_t l_logs = 0, o_logs = 0, p_logs = 0, others = 0;
 
   if (iter->Valid() || range_del_agg->ShouldAddTombstones()) {
     TableBuilder* builder;
@@ -141,7 +142,28 @@ Status BuildTable(
     for (; c_iter.Valid(); c_iter.Next()) {
       const Slice& key = c_iter.key();
       const Slice& value = c_iter.value();
+      int len = key.size() + value.size();
       builder->Add(key, value);
+
+      ParsedInternalKey temp_ikey;
+      if (ParseInternalKey(key, &temp_ikey)) {
+      const char *raw_key = temp_ikey.user_key.data();
+      switch (raw_key[0]) {
+      case 'P':
+          p_logs += len;
+          break;
+      case 'O':
+          o_logs += len;
+          break;
+      case 'L':
+          l_logs += len;
+          break;
+      default:
+          others += len;
+          break;
+      }
+      }
+
       meta->UpdateBoundaries(key, c_iter.ikey().sequence);
 
       // TODO(noetzli): Update stats after flush, too.
@@ -220,7 +242,7 @@ Status BuildTable(
   // Output to event logger and fire events.
   EventHelpers::LogAndNotifyTableFileCreationFinished(
       event_logger, ioptions.listeners, dbname, column_family_name, fname,
-      job_id, meta->fd, tp, reason, s);
+      job_id, meta->fd, tp, reason, s, p_logs, o_logs, l_logs, others);
 
   return s;
 }

@@ -61,7 +61,9 @@ void EventHelpers::LogAndNotifyTableFileCreationFinished(
     const std::string& db_name, const std::string& cf_name,
     const std::string& file_path, int job_id, const FileDescriptor& fd,
     const TableProperties& table_properties, TableFileCreationReason reason,
-    const Status& s) {
+    const Status& s,
+    const uint64_t p_logs, const uint64_t o_logs,
+    const uint64_t l_logs, const uint64_t others) {
   if (s.ok() && event_logger) {
     JSONWriter jwriter;
     AppendCurrentTime(&jwriter);
@@ -88,7 +90,11 @@ void EventHelpers::LogAndNotifyTableFileCreationFinished(
                             table_properties.num_entries)
               << "num_data_blocks" << table_properties.num_data_blocks
               << "num_entries" << table_properties.num_entries
-              << "filter_policy_name" << table_properties.filter_policy_name;
+              << "filter_policy_name" << table_properties.filter_policy_name
+              << "p_logs" << p_logs
+              << "o_logs" << o_logs
+              << "l_logs" << l_logs
+              << "others" << others;
 
       // user collected properties
       for (const auto& prop : table_properties.readable_properties) {

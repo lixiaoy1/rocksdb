@@ -290,13 +290,17 @@ Status SstFileReader::ReadSequential(bool print_kv, uint64_t read_num,
   if (!table_reader_) {
     return init_result_;
   }
+  uint64_t l_logs = 0;
+  uint64_t o_logs = 0;
+  uint64_t m_logs = 0;
+  uint64_t others = 0;
 
   InternalIterator* iter =
       table_reader_->NewIterator(ReadOptions(verify_checksum_, false));
   uint64_t i = 0;
   if (has_from) {
     InternalKey ikey;
-    ikey.SetMinPossibleForUserKey(from_key);
+    ikey.SetMaxPossibleForUserKey(from_key);
     iter->Seek(ikey.Encode());
   } else {
     iter->SeekToFirst();
@@ -315,6 +319,22 @@ Status SstFileReader::ReadSequential(bool print_kv, uint64_t read_num,
                 << "] parse error!\n";
       continue;
     }
+    const char *raw_key = ikey.user_key.data();
+    fprintf(stdout, "raw key is %c\n", raw_key[0]);
+    switch (raw_key[0]) {
+    case 'M':
+      m_logs += key.size() + value.size();
+      break;
+    case 'O':
+      o_logs += key.size() + value.size();
+      break;
+    case 'L':
+      l_logs += key.size() + value.size();
+      break;
+    default:
+      others += key.size() + value.size();
+      break;
+    } 
 
     // the key returned is not prefixed with out 'from' key
     if (use_from_as_prefix && !ikey.user_key.starts_with(from_key)) {
@@ -327,11 +347,14 @@ Status SstFileReader::ReadSequential(bool print_kv, uint64_t read_num,
     }
 
     if (print_kv) {
-      fprintf(stdout, "%s => %s\n",
-          ikey.DebugString(output_hex_).c_str(),
+      fprintf(stdout, " %s => %s\n",
+          key.ToString(output_hex_).c_str(),
           value.ToString(output_hex_).c_str());
     }
   }
+
+  fprintf(stdout, "deferred logs: %ld\n onode logs: %ld\n map logs: %ld other logs: %ld\n",
+          l_logs, o_logs, m_logs, others);
 
   read_num_ += i;
 

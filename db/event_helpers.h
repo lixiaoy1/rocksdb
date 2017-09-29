@@ -35,7 +35,9 @@ class EventHelpers {
       const std::string& db_name, const std::string& cf_name,
       const std::string& file_path, int job_id, const FileDescriptor& fd,
       const TableProperties& table_properties, TableFileCreationReason reason,
-      const Status& s);
+      const Status& s,
+      const uint64_t m_logs = 0, const uint64_t o_logs = 0,
+      const uint64_t l_logs = 0, const uint64_t others = 0);
   static void LogAndNotifyTableFileDeletion(
       EventLogger* event_logger, int job_id,
       uint64_t file_number, const std::string& file_path,
